@@ -9,6 +9,6 @@ pub fn ka_fn() {
 }
 
 pub fn type_key(key: &str) {
-    let cmd = Command::new("ydotool")
+    let _cmd = Command::new("ydotool")
         .args(["type", key]).output().expect("dang");
 }

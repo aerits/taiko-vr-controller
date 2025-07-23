@@ -1,23 +1,18 @@
 //! A simple 3D scene with light shining over a cube sitting on a plane.
 
-use bevy::{ecs::bundle, prelude::*};
+use bevy::prelude::*;
 use bevy_mod_openxr::{
-    action_binding::OxrSendActionBindings, add_xr_plugins,
-    features::overlay::OxrOverlaySessionEvent, init::OxrInitPlugin, resources::OxrSessionConfig,
-    types::OxrExtensions,
+    action_binding::OxrSendActionBindings, add_xr_plugins, init::OxrInitPlugin,
+    resources::OxrSessionConfig, types::OxrExtensions,
 };
-use bevy_mod_xr::session::{XrSessionCreated, XrTracker};
+use bevy_mod_xr::session::XrSessionCreated;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::prelude::*;
-use bevy_xr_utils::{
-    tracking_utils::{
-        TrackingUtilitiesPlugin, XrTrackedLeftGrip, XrTrackedLocalFloor, XrTrackedRightGrip,
-        XrTrackedStage, XrTrackedView, suggest_action_bindings,
-    },
-    xr_utils_actions::XRUtilsActionState,
+use bevy_xr_utils::tracking_utils::{
+    suggest_action_bindings, TrackingUtilitiesPlugin, XrTrackedView,
 };
 use openxr::EnvironmentBlendMode;
-use std::{fs, mem::MaybeUninit};
+use std::fs;
 
 use crate::{
     keyb::{don_fn, ka_fn},
@@ -31,11 +26,12 @@ struct Taiko;
 enum BachiState {
     Don,
     Ka,
-    None
+    None,
 }
 #[derive(Component, Debug)]
 struct Bachi {
-    state: BachiState
+    state: BachiState,
+    parent: Entity,
 }
 
 mod keyb;
@@ -72,8 +68,27 @@ fn main() {
         .add_systems(Update, handle_input)
         .add_systems(XrSessionCreated, (spawn_hands, spawn_bachi).chain())
         .add_systems(OxrSendActionBindings, suggest_action_bindings)
-        .add_systems(Update, display_events)
+        .add_systems(Update, bachi_force)
+        .add_systems(FixedUpdate, display_events)
         .run();
+}
+
+fn bachi_force(
+    bachis: Query<(&Bachi, Entity, &GlobalTransform, &mut ExternalForce)>,
+    mut cmds: Commands,
+    position: Query<&GlobalTransform>,
+) {
+    for (bachi, bachi_e, bachi_t, mut extforce) in bachis {
+        let parent_t = position.get(bachi.parent).unwrap();
+        let strength = 1f32;
+        let offset = vec3(0.0, 0.0, 0.3);
+        let force = (parent_t.translation() + offset - bachi_t.translation()).normalize_or_zero()
+            * strength
+            * (parent_t.translation() + offset).distance(bachi_t.translation());
+        let torque = offset;
+        extforce.force = force;
+        extforce.torque = torque;
+    }
 }
 
 fn is_<T: Component>(query: Query<&T>, entity: &Entity, entity1: &Entity) -> Option<Entity> {
@@ -87,7 +102,6 @@ fn is_<T: Component>(query: Query<&T>, entity: &Entity, entity1: &Entity) -> Opt
 }
 
 fn display_events(
-    mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     mut contact_force_events: EventReader<ContactForceEvent>,
     is_don: Query<&Don>,
@@ -96,7 +110,7 @@ fn display_events(
 ) {
     for collision_event in collision_events.read() {
         match collision_event {
-            CollisionEvent::Started(entity, entity1, collision_event_flags) => {
+            CollisionEvent::Started(entity, entity1, _collision_event_flags) => {
                 let mut bachi = if let Ok(b) = bachi.get_mut(*entity) {
                     b
                 } else if let Ok(b) = bachi.get_mut(*entity1) {
@@ -115,7 +129,7 @@ fn display_events(
                 }
                 ()
             }
-            CollisionEvent::Stopped(entity, entity1, collision_event_flags) => {
+            CollisionEvent::Stopped(entity, entity1, _collision_event_flags) => {
                 let mut bachi = if let Ok(b) = bachi.get_mut(*entity) {
                     b
                 } else if let Ok(b) = bachi.get_mut(*entity1) {
@@ -147,9 +161,7 @@ struct Don;
 fn handle_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     headset: Query<&Transform, With<XrTrackedView>>,
     old_taiko: Query<Entity, With<Taiko>>,
 ) {
@@ -185,8 +197,6 @@ fn handle_input(
         let cube_position = e.translation * flat_vec + forward_direction.normalize() * distance;
         cube_position
     };
-
-    let mut don_left = asset_server.load::<Mesh>("don_left.obj");
 
     let taiko_model = commands
         .spawn(SceneRoot(
@@ -243,10 +253,7 @@ fn hitbox_gen(
     let mut verts = Vec::new();
     let mut tris = Vec::new();
     for line in contents.lines() {
-        // println!("{}", line);
         if line.starts_with("v ") {
-            let split: Vec<&str> = line[2..].split(" ").collect();
-            // println!("{:?}", split);
             let split: Vec<f32> = line[2..].split(" ").map(|x| x.parse().unwrap()).collect();
             verts.push(Vec3 {
                 x: split[0],
@@ -260,16 +267,13 @@ fn hitbox_gen(
                 .map(|x| x.split("/").collect::<Vec<&str>>()[0])
                 .map(|x| x.parse::<u32>().unwrap())
                 .collect();
-            // println!("{:?}", split);
             tris.push([split[0] - 1, split[1] - 1, split[2] - 1]);
         }
     }
     println!("{}, {}", verts.len(), tris.len());
     (
-        // tf,
         Transform::from_xyz(0.0, 0.0, 0.0),
         RigidBody::Fixed,
-        // Collider::cuboid(0.1, 0.1, 0.1),
         Collider::trimesh(verts, tris).unwrap(),
         ActiveEvents::COLLISION_EVENTS,
         ActiveCollisionTypes::default() | ActiveCollisionTypes::all(),

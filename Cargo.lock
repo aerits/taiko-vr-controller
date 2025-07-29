@@ -318,7 +318,6 @@ version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b8369c16b7c017437021341521f8b4a0d98e1c70113fb358c3258ae7d661d79"
 dependencies = [
- "bevy_dylib",
  "bevy_internal",
 ]
 
@@ -535,15 +534,6 @@ dependencies = [
  "log",
  "serde",
  "sysinfo",
-]
-
-[[package]]
-name = "bevy_dylib"
-version = "0.16.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dc3602098b2604941b2829a04ac316de1e36aad949cbffce8861896b9b32532"
-dependencies = [
- "bevy_internal",
 ]
 
 [[package]]
@@ -883,7 +873,25 @@ dependencies = [
  "android_system_properties",
  "ash",
  "bevy",
- "bevy_mod_xr",
+ "bevy_mod_xr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jni 0.20.0",
+ "ndk-context",
+ "openxr",
+ "thiserror 2.0.12",
+ "wgpu",
+ "wgpu-hal",
+ "winapi",
+]
+
+[[package]]
+name = "bevy_mod_openxr"
+version = "0.3.0"
+source = "git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces#3ade8691305ab433b2ebf88d3525a6725b431f44"
+dependencies = [
+ "android_system_properties",
+ "ash",
+ "bevy",
+ "bevy_mod_xr 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
  "jni 0.20.0",
  "ndk-context",
  "openxr",
@@ -898,6 +906,14 @@ name = "bevy_mod_xr"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58439f80da6ab6a7bb04d2d089987d3feeb8fff6cf965f969f75e269bcc6faa3"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
+name = "bevy_mod_xr"
+version = "0.3.0"
+source = "git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces#3ade8691305ab433b2ebf88d3525a6725b431f44"
 dependencies = [
  "bevy",
 ]
@@ -1385,9 +1401,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b308b7a2f23be028726c0315e932ff7e18c273703ac2bc08c85d643e8ecb9626"
 dependencies = [
  "bevy",
- "bevy_mod_openxr",
- "bevy_mod_xr",
+ "bevy_mod_openxr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bevy_mod_xr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "openxr",
+]
+
+[[package]]
+name = "bevy_xr_utils"
+version = "0.3.0"
+source = "git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces#3ade8691305ab433b2ebf88d3525a6725b431f44"
+dependencies = [
+ "bevy",
+ "bevy_mod_openxr 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
+ "bevy_mod_xr 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
+ "openxr",
+ "openxr_mndx_xdev_space",
 ]
 
 [[package]]
@@ -1923,6 +1951,17 @@ name = "data-encoding"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
+
+[[package]]
+name = "ddr"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_mod_openxr 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
+ "bevy_mod_xr 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
+ "bevy_xr_utils 0.3.0 (git+https://github.com/Schmarni-Dev/bevy_openxr/?branch=mndx_xdev_spaces)",
+ "openxr",
+]
 
 [[package]]
 name = "derive_more"
@@ -3434,6 +3473,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "openxr_mndx_xdev_space"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1589b0afd8fdf8d5d143457d1d3edf763c6f0e79254435351245a39975711f25"
+dependencies = [
+ "openxr",
+]
+
+[[package]]
 name = "orbclient"
 version = "0.3.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4290,16 +4338,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "taiko-vr"
+name = "taiko"
 version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_gltf",
- "bevy_mod_openxr",
- "bevy_mod_xr",
+ "bevy_mod_openxr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bevy_mod_xr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bevy_obj",
  "bevy_rapier3d",
- "bevy_xr_utils",
+ "bevy_xr_utils 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "openxr",
 ]
 

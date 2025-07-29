@@ -72,6 +72,8 @@
               # wayland
               libxkbcommon
               wayland
+              ydotool
+              xdotool
               # xr
               openxr-loader
               libGL

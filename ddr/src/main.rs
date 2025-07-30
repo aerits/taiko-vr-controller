@@ -1,3 +1,5 @@
+use std::{error::Error, fs, time::SystemTime};
+
 use bevy::prelude::*;
 use bevy_mod_openxr::{
     add_xr_plugins, exts::OxrExtensions, init::OxrInitPlugin, resources::OxrSessionConfig,
@@ -9,6 +11,7 @@ use bevy_xr_utils::{
     mndx_xdev_spaces_trackers::MonadoXDevSpacesPlugin,
 };
 use openxr::EnvironmentBlendMode;
+use serde::Deserialize;
 fn main() -> AppExit {
     App::new()
         .add_plugins(add_xr_plugins(DefaultPlugins).set(OxrInitPlugin {
@@ -36,13 +39,71 @@ fn main() -> AppExit {
         ))
         .add_systems(Startup, setup)
         .add_systems(Update, tracker_status)
+        .add_systems(Update, init_tracker)
+        .add_systems(Update, reload_sets)
         .run()
 }
 
-fn tracker_status(q: Query<&GlobalTransform, With<GenericTracker>>) {
-    for (id, t) in q.iter().enumerate() {
-        let v = t.translation();
-        println!("id: {} -- {} {} {}", id, v.x, v.y, v.z);
+#[derive(Component)]
+struct Foot {
+    last_pos: Vec3,
+    last_vel: Vec3,
+}
+
+#[derive(Component, Deserialize, Debug)]
+struct Settings {
+    acc_factor: f32,
+    vel_factor: f32,
+}
+
+fn init_tracker(q: Query<Entity, (With<GenericTracker>, Without<Foot>)>, mut cmds: Commands) {
+    for e in q {
+        cmds.entity(e).insert(Foot {
+            last_pos: Vec3::ZERO,
+            last_vel: Vec3::ZERO,
+        });
+        println!("inserted foot");
+    }
+}
+
+fn reload_sets(mut sets: Query<&mut Settings>, keys: Res<ButtonInput<KeyCode>>) {
+    if keys.just_pressed(KeyCode::KeyR)
+        && let Ok(x) = load_data()
+        && let Some(mut o) = sets.iter_mut().next()
+    {
+        o.acc_factor = x.acc_factor;
+        o.vel_factor = x.vel_factor;
+    }
+}
+
+fn load_data() -> Result<Settings, Box<dyn Error>> {
+    let data = fs::read_to_string("./settings.json")?;
+    let setts: Settings = serde_json::from_str(&data)?;
+    return Ok(setts);
+}
+
+fn tracker_status(
+    mut q: Query<(&GlobalTransform, &mut Foot), With<GenericTracker>>,
+    sets: Query<&Settings>,
+) {
+    let sets = sets.iter().next().unwrap();
+    for (t, mut f) in &mut q {
+        let curr_pos = t.translation();
+        let last_pos = f.last_pos;
+        let last_vel = f.last_vel;
+
+        let v = curr_pos - last_pos;
+        let a = v - last_vel;
+        let y_vel = v.y;
+        let y_acc = a.y;
+        // if y-acceleration is negative and y-velocity is negative, then
+        // the foot hit the ground
+        if y_acc < sets.acc_factor && y_vel < sets.vel_factor {
+            println!("foot hit floor at {:?}", SystemTime::now())
+        }
+
+        f.last_vel = v;
+        f.last_pos = curr_pos;
     }
 }
 
@@ -65,6 +126,8 @@ fn setup(
     //     Transform::from_xyz(0.0, 0.5, 0.0),
     // ));
     // light
+    let setts: Settings = load_data().unwrap();
+    commands.spawn(setts);
     commands.spawn((
         PointLight {
             shadows_enabled: true,

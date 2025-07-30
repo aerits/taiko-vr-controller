@@ -96,9 +96,9 @@ fn tracker_status(
         let a = v - last_vel;
         let y_vel = v.y;
         let y_acc = a.y;
-        // if y-acceleration is negative and y-velocity is negative, then
+        // if y-acceleration is positive and y-velocity is negative, then
         // the foot hit the ground
-        if y_acc < sets.acc_factor && y_vel < sets.vel_factor {
+        if y_acc > sets.acc_factor && y_vel < sets.vel_factor {
             println!("foot hit floor at {:?}", SystemTime::now())
         }
 
